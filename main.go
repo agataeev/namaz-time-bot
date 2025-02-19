@@ -3,7 +3,6 @@ package main
 import (
 	"namaz-time-bot/bot"
 	"namaz-time-bot/config"
-	"namaz-time-bot/storage"
 )
 
 //TIP <p>To run your code, right-click the code and select <b>Run</b>.</p> <p>Alternatively, click
@@ -12,6 +11,5 @@ import (
 func main() {
 
 	config.LoadEnv() // Загружаем переменные окружения
-	storage.InitDB() // Инициализируем базу данных
 	bot.StartBot()   // Запускаем бота
 }

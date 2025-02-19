@@ -10,7 +10,7 @@ import (
 func HandleCommand(msg *tgbotapi.Message) {
 	switch msg.Text {
 	case "/start":
-		sendMessage(msg.Chat.ID, "Привет! Я бот для напоминаний о намазе.")
+		sendWelcomeMessage(msg.Chat.ID)
 	case "/mark":
 		sendPrayerButtons(msg.Chat.ID)
 	case "/prayer_times":
@@ -31,11 +31,36 @@ func HandleCommand(msg *tgbotapi.Message) {
 			city, times.Fajr, times.Dhuhr, times.Asr, times.Maghrib, times.Isha,
 		)
 		sendMessage(msg.Chat.ID, response)
+	case "/set_city":
+		sendCityButtons(msg.Chat.ID)
 	case "/set_reminders":
 		setReminders(msg.Chat.ID)
+	case "/help":
+		sendHelpMessage(msg.Chat.ID)
 	default:
 		sendMessage(msg.Chat.ID, "Неизвестная команда. Используйте /start.")
 	}
+}
+
+// sendWelcomeMessage отправляет приветственное сообщение
+func sendWelcomeMessage(chatID int64) {
+	text := "🌟 Добро пожаловать в бота для напоминаний о намазе!\n\n" +
+		"Используйте /help, чтобы увидеть список доступных команд."
+
+	sendMessage(chatID, text)
+}
+
+// sendHelpMessage отправляет список команд
+func sendHelpMessage(chatID int64) {
+	text := "📌 *Список команд:*\n\n" +
+		"🔹 /start - Начать работу с ботом\n" +
+		"🔹 /help - Показать список команд\n" +
+		"🔹 /set_city - Установить город для определения времени намаза\n" +
+		"🔹 /set_reminders - Включить напоминания о намазах\n" +
+		"🔹 /disable_reminders - Отключить напоминания\n" +
+		"🔹 /prayer_times - Показать текущее расписание намазов\n"
+
+	sendMessage(chatID, text)
 }
 
 func setReminders(chatID int64) {
@@ -100,6 +125,10 @@ func sendPrayerButtons(chatID int64) {
 
 func sendCityButtons(chatID int64) {
 	buttons := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("🏙️ Алматы", "city_Almaty"),
+			tgbotapi.NewInlineKeyboardButtonData("🏙️ Астана", "city_Astana"),
+		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("🏙️ Москва", "city_Moscow"),
 			tgbotapi.NewInlineKeyboardButtonData("🏙️ Казань", "city_Kazan"),

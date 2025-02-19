@@ -27,7 +27,7 @@ func InitDB() {
 // SaveUser сохраняет пользователя и его город
 func SaveUser(chatID int64, city string) error {
 	_, err := DB.Exec(context.Background(),
-		"INSERT INTO users (chat_id, city) VALUES ($1, $2) ON CONFLICT (chat_id) DO UPDATE SET city = $2",
+		"INSERT INTO namaz_time_bot.users (chat_id, city) VALUES ($1, $2) ON CONFLICT (chat_id) DO UPDATE SET city = $2",
 		chatID, city)
 	return err
 }
@@ -36,21 +36,21 @@ func SaveUser(chatID int64, city string) error {
 func GetUserCity(chatID int64) (string, error) {
 	var city string
 	err := DB.QueryRow(context.Background(),
-		"SELECT city FROM users WHERE chat_id = $1", chatID).Scan(&city)
+		"SELECT city FROM namaz_time_bot.users WHERE chat_id = $1", chatID).Scan(&city)
 	return city, err
 }
 
 // SavePrayer отмечает выполнение намаза
 func SavePrayer(chatID int64, prayer string) error {
 	_, err := DB.Exec(context.Background(),
-		"INSERT INTO prayers (chat_id, prayer_name) VALUES ($1, $2)", chatID, prayer)
+		"INSERT INTO namaz_time_bot.prayers (chat_id, prayer_name) VALUES ($1, $2)", chatID, prayer)
 	return err
 }
 
 // SaveReminder сохраняет напоминание
 func SaveReminder(chatID int64, prayer string, time string) error {
 	_, err := DB.Exec(context.Background(),
-		"INSERT INTO reminders (chat_id, prayer_name, reminder_time) VALUES ($1, $2, $3)",
+		"INSERT INTO namaz_time_bot.reminders (chat_id, prayer_name, reminder_time) VALUES ($1, $2, $3)",
 		chatID, prayer, time)
 	return err
 }
@@ -61,7 +61,7 @@ func GetReminders(currentTime string) ([]struct {
 	PrayerName string
 }, error) {
 	rows, err := DB.Query(context.Background(),
-		"SELECT chat_id, prayer_name FROM reminders WHERE reminder_time = $1", currentTime)
+		"SELECT chat_id, prayer_name FROM namaz_time_bot.reminders WHERE reminder_time = $1", currentTime)
 	if err != nil {
 		return nil, err
 	}
