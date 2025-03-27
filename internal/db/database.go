@@ -27,7 +27,7 @@ func InitDB() {
 // SaveUser сохраняет пользователя и его город
 func SaveUser(chatID int64, city string) error {
 	_, err := DB.Exec(context.Background(),
-		"INSERT INTO users (chat_id, city) VALUES ($1, $2) ON CONFLICT (chat_id) DO UPDATE SET city = $2",
+		"INSERT INTO users (chat_id, city) VALUES ($1, $2)",
 		chatID, city)
 	return err
 }
