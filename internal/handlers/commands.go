@@ -37,9 +37,35 @@ func HandleCommand(msg *tgbotapi.Message) {
 		setReminders(msg.Chat.ID)
 	case "/help":
 		sendHelpMessage(msg.Chat.ID)
+	case "/set_prayer_times":
+		setPrayerTimes(msg.Chat.ID)
 	default:
 		sendMessage(msg.Chat.ID, "Неизвестная команда. Используйте /start.")
 	}
+}
+
+// setPrayerTimes устанавливает время намазов для пользователя
+func setPrayerTimes(chatID int64) {
+	city, err := db.GetUserCity(chatID)
+	if err != nil {
+		sendMessage(chatID, "🌍 Вы не выбрали город! Используйте /set_city.")
+		return
+	}
+
+	times, err := api.GetPrayerTimes(city, "Russia")
+	if err != nil {
+		sendMessage(chatID, "Ошибка при получении времени намаза.")
+		return
+	}
+
+	// Сохраняем в БД
+	err = db.SavePrayerTimes(chatID, city, times.Fajr, times.Dhuhr, times.Asr, times.Maghrib, times.Isha)
+	if err != nil {
+		sendMessage(chatID, "❌ Ошибка сохранения времени намаза.")
+		return
+	}
+
+	sendMessage(chatID, "✅ Время намазов обновлено!")
 }
 
 // sendWelcomeMessage отправляет приветственное сообщение
@@ -142,8 +168,3 @@ func sendCityButtons(chatID int64) {
 	msg.ReplyMarkup = buttons
 	botAPI.Send(msg)
 }
-
-//func sendMessage(chatID int64, text string) {
-//	msg := tgbotapi.NewMessage(chatID, text)
-//	bot.Bot.Send(msg)
-//}

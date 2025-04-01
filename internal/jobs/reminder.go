@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"fmt"
 	"log"
 	"namaz-time-bot/internal/db"
 	"time"
@@ -22,15 +23,26 @@ func StartReminderJob() {
 	go func() {
 		for range ticker.C {
 			currentTime := time.Now().Format("15:04")
-			reminders, err := db.GetReminders(currentTime)
+
+			// Получаем пользователей с установленными намазами
+			users, err := db.GetUsersWithPrayerTimes()
 			if err != nil {
-				log.Println("Ошибка получения напоминаний:", err)
+				log.Println("Ошибка получения пользователей:", err)
 				continue
 			}
 
-			for _, r := range reminders {
-				msg := tgbotapi.NewMessage(r.ChatID, "🔔 Время намаза: "+r.PrayerName)
-				botAPI.Send(msg)
+			for _, user := range users {
+				times, err := db.GetPrayerTimes(user.ChatID)
+				if err != nil {
+					continue
+				}
+
+				for prayer, time := range times {
+					if time[:5] == currentTime {
+						msg := tgbotapi.NewMessage(user.ChatID, fmt.Sprintf("🔔 Время %s! 🙏", prayer))
+						botAPI.Send(msg)
+					}
+				}
 			}
 		}
 	}()

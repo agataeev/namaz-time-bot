@@ -27,7 +27,7 @@ func InitDB() {
 // SaveUser сохраняет пользователя и его город
 func SaveUser(chatID int64, city string) error {
 	_, err := DB.Exec(context.Background(),
-		"INSERT INTO users (chat_id, city) VALUES ($1, $2) ON CONFLICT (chat_id) DO UPDATE SET city = $2",
+		"INSERT INTO users (chat_id, city) VALUES ($1, $2)",
 		chatID, city)
 	return err
 }
@@ -82,4 +82,35 @@ func GetReminders(currentTime string) ([]struct {
 		reminders = append(reminders, r)
 	}
 	return reminders, nil
+}
+
+// SavePrayerTimes сохраняет расписание намазов для пользователя
+func SavePrayerTimes(chatID int64, city string, fajr, dhuhr, asr, maghrib, isha string) error {
+	_, err := DB.Exec(context.Background(),
+		`INSERT INTO prayer_times (chat_id, city, fajr, dhuhr, asr, maghrib, isha, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+         ON CONFLICT (chat_id) 
+         DO UPDATE SET city = $2, fajr = $3, dhuhr = $4, asr = $5, maghrib = $6, isha = $7, updated_at = NOW()`,
+		chatID, city, fajr, dhuhr, asr, maghrib, isha)
+	return err
+}
+
+// GetPrayerTimes возвращает время намазов для конкретного пользователя
+func GetPrayerTimes(chatID int64) (map[string]string, error) {
+	row := DB.QueryRow(context.Background(),
+		"SELECT fajr, dhuhr, asr, maghrib, isha FROM prayer_times WHERE chat_id = $1", chatID)
+
+	var fajr, dhuhr, asr, maghrib, isha string
+	err := row.Scan(&fajr, &dhuhr, &asr, &maghrib, &isha)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]string{
+		"Фаджр":  fajr,
+		"Зухр":   dhuhr,
+		"Аср":    asr,
+		"Магриб": maghrib,
+		"Иша":    isha,
+	}, nil
 }
