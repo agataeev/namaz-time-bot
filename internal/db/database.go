@@ -114,3 +114,32 @@ func GetPrayerTimes(chatID int64) (map[string]string, error) {
 		"Иша":    isha,
 	}, nil
 }
+
+// GetUsersWithPrayerTimes получает пользователей с установленными намазами
+func GetUsersWithPrayerTimes() ([]struct {
+	ChatID int64
+	City   string
+}, error) {
+	rows, err := DB.Query(context.Background(),
+		"SELECT chat_id, city FROM users WHERE city IS NOT NULL")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []struct {
+		ChatID int64
+		City   string
+	}
+	for rows.Next() {
+		var user struct {
+			ChatID int64
+			City   string
+		}
+		if err := rows.Scan(&user.ChatID, &user.City); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}
