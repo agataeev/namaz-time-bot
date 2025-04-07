@@ -28,6 +28,9 @@ func StartBot() {
 	u.Timeout = 60
 	updates := Bot.GetUpdatesChan(u)
 
+	//add log
+	log.Printf("Authorized on account %s", Bot.Self.UserName)
+	log.Printf("Bot started...🚀🚀🚀")
 	for update := range updates {
 		if update.Message != nil {
 			handlers.HandleCommand(update.Message)

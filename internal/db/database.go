@@ -2,10 +2,9 @@ package db
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"os"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var DB *pgxpool.Pool
@@ -86,12 +85,41 @@ func GetReminders(currentTime string) ([]struct {
 
 // SavePrayerTimes сохраняет расписание намазов для пользователя
 func SavePrayerTimes(chatID int64, city string, fajr, dhuhr, asr, maghrib, isha string) error {
-	_, err := DB.Exec(context.Background(),
-		`INSERT INTO prayer_times (chat_id, city, fajr, dhuhr, asr, maghrib, isha, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-         ON CONFLICT (chat_id) 
-         DO UPDATE SET city = $2, fajr = $3, dhuhr = $4, asr = $5, maghrib = $6, isha = $7, updated_at = NOW()`,
-		chatID, city, fajr, dhuhr, asr, maghrib, isha)
+	// Сохраняем расписание намазов в БД
+
+	var exists bool
+	err := DB.QueryRow(context.Background(),
+		`SELECT EXISTS (SELECT 1 FROM prayer_times WHERE chat_id = $1)`,
+		chatID,
+	).Scan(&exists)
+	if err != nil {
+		// обработка ошибки
+		log.Println("ошибка при проверке существования:", err)
+		return err
+	}
+
+	if exists {
+		// Обновляем
+		_, err = DB.Exec(context.Background(),
+			`UPDATE prayer_times 
+		 SET city = $2, fajr = $3, dhuhr = $4, asr = $5, maghrib = $6, isha = $7, updated_at = NOW()
+		 WHERE chat_id = $1`,
+			chatID, city, fajr, dhuhr, asr, maghrib, isha,
+		)
+	} else {
+		// Вставляем
+		_, err = DB.Exec(context.Background(),
+			`INSERT INTO prayer_times (chat_id, city, fajr, dhuhr, asr, maghrib, isha, updated_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+			chatID, city, fajr, dhuhr, asr, maghrib, isha,
+		)
+	}
+
+	if err != nil {
+		log.Println("ошибка при вставке/обновлении:", err)
+		return err
+	}
+
 	return err
 }
 

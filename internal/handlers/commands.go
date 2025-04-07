@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"log"
 	"namaz-time-bot/internal/api"
 	"namaz-time-bot/internal/db"
 )
@@ -20,7 +21,7 @@ func HandleCommand(msg *tgbotapi.Message) {
 			return
 		}
 
-		times, err := api.GetPrayerTimes(city, "Russia")
+		times, err := api.GetPrayerTimes(city, "Kazakhstan")
 		if err != nil {
 			sendMessage(msg.Chat.ID, "Ошибка при получении времени намаза.")
 			return
@@ -48,12 +49,14 @@ func HandleCommand(msg *tgbotapi.Message) {
 func setPrayerTimes(chatID int64) {
 	city, err := db.GetUserCity(chatID)
 	if err != nil {
+		log.Println(err)
 		sendMessage(chatID, "🌍 Вы не выбрали город! Используйте /set_city.")
 		return
 	}
 
-	times, err := api.GetPrayerTimes(city, "Russia")
+	times, err := api.GetPrayerTimes(city, "Kazakhstan")
 	if err != nil {
+		log.Println(err)
 		sendMessage(chatID, "Ошибка при получении времени намаза.")
 		return
 	}
@@ -61,6 +64,7 @@ func setPrayerTimes(chatID int64) {
 	// Сохраняем в БД
 	err = db.SavePrayerTimes(chatID, city, times.Fajr, times.Dhuhr, times.Asr, times.Maghrib, times.Isha)
 	if err != nil {
+		log.Println(err)
 		sendMessage(chatID, "❌ Ошибка сохранения времени намаза.")
 		return
 	}

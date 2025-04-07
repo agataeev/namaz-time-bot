@@ -22,7 +22,3 @@ func sendReminder(prayer string) {
 	msg := fmt.Sprintf("Напоминание: Время намаза – %s", prayer)
 	bot.Bot.Send(tgbotapi.NewMessage(-1001234567890, msg))
 }
-
-func GetPrayerTimes() string {
-	return "Время намазов: Фаджр - 5:00, Зухр - 12:00, Аср - 15:00, Магриб - 18:00, Иша - 20:00"
-}
