@@ -24,7 +24,6 @@ func StartReminderJob() {
 	go func() {
 		for range ticker.C {
 			currentTime := time.Now().In(location).Format("15:04")
-			fmt.Println("Текущее время в UTC+5:", currentTime)
 
 			// Получаем пользователей с установленными намазами
 			users, err := db.GetUsersWithPrayerTimes()
