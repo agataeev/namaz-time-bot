@@ -40,7 +40,7 @@ func StartReminderJob() {
 
 				for prayer, time := range times {
 					if time == currentTime {
-						msg := tgbotapi.NewMessage(user.ChatID, fmt.Sprintf("🔔 Время %s! 🙏", prayer))
+						msg := tgbotapi.NewMessage(user.ChatID, fmt.Sprintf("🔔 Время %s! 🙏\n✅ Не забудьте отметить выполнение намаза с помощью команды /mark", prayer))
 						botAPI.Send(msg)
 					}
 				}
