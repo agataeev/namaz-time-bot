@@ -19,6 +19,15 @@ func StartBot() {
 		log.Fatal(err)
 	}
 
+	// Удаляем активный вебхук
+	_, err = Bot.Request(tgbotapi.DeleteWebhookConfig{})
+	if err != nil {
+		log.Panic("Ошибка удаления вебхука:", err)
+	}
+
+	// Теперь можно использовать getUpdates
+	log.Println("Вебхук удалён, можно использовать getUpdates")
+
 	db.InitDB()                // Подключаем БД
 	handlers.InitHandlers(Bot) // Передаём бота в обработчики
 	jobs.InitJobs(Bot)         // Передаём бота в фоновые задачи
