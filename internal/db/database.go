@@ -42,7 +42,8 @@ func GetUserCity(chatID int64) (string, error) {
 
 // SavePrayer отмечает выполнение намаза
 func SavePrayer(chatID int64, prayer string) error {
-	completedAt := time.Now().UTC().Format("2006-01-02 15:04:05.000000")
+	location := time.FixedZone("UTC+5", 5*60*60)
+	completedAt := time.Now().In(location).UTC().Format("2006-01-02 15:04:05.000000")
 	_, err := DB.Exec(context.Background(),
 		"INSERT INTO prayers (chat_id, prayer_name, completed_at) VALUES ($1, $2, $3)", chatID, prayer, completedAt)
 	return err
