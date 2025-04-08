@@ -5,6 +5,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"os"
+	"time"
 )
 
 var DB *pgxpool.Pool
@@ -42,7 +43,7 @@ func GetUserCity(chatID int64) (string, error) {
 // SavePrayer отмечает выполнение намаза
 func SavePrayer(chatID int64, prayer string) error {
 	_, err := DB.Exec(context.Background(),
-		"INSERT INTO prayers (chat_id, prayer_name) VALUES ($1, $2)", chatID, prayer)
+		"INSERT INTO prayers (chat_id, prayer_name, completed_at) VALUES ($1, $2, $3)", chatID, prayer, time.Now().In(time.UTC))
 	return err
 }
 
