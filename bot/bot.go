@@ -6,6 +6,7 @@ import (
 	"namaz-time-bot/internal/db"
 	"namaz-time-bot/internal/handlers"
 	"namaz-time-bot/internal/jobs"
+	"namaz-time-bot/internal/scheduler"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -32,6 +33,7 @@ func StartBot() {
 	handlers.InitHandlers(Bot) // Передаём бота в обработчики
 	jobs.InitJobs(Bot)         // Передаём бота в фоновые задачи
 	jobs.StartReminderJob()    // Запускаем напоминания
+	scheduler.StartScheduler() // Запускаем планировщик задач
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60

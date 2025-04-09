@@ -1,24 +1,50 @@
 package scheduler
 
 import (
-	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"namaz-time-bot/bot"
+	"log"
+	"namaz-time-bot/internal/api"
+	"namaz-time-bot/internal/db"
 
 	"github.com/robfig/cron/v3"
 )
 
 func StartScheduler() {
 	c := cron.New()
-	c.AddFunc("0 5 * * *", func() { sendReminder("Фаджр") })
-	c.AddFunc("0 12 * * *", func() { sendReminder("Зухр") })
-	c.AddFunc("0 15 * * *", func() { sendReminder("Аср") })
-	c.AddFunc("0 18 * * *", func() { sendReminder("Магриб") })
-	c.AddFunc("0 20 * * *", func() { sendReminder("Иша") })
+	//once a day at 00:00
+	_, err := c.AddFunc("0 0 * * *", func() { UpdatePrayerTimesJob() })
+	if err != nil {
+		log.Println("Ошибка добавления задачи в cron:", err)
+		return
+	}
 	c.Start()
 }
 
-func sendReminder(prayer string) {
-	msg := fmt.Sprintf("Напоминание: Время намаза – %s", prayer)
-	bot.Bot.Send(tgbotapi.NewMessage(-1001234567890, msg))
+// UpdatePrayerTimesJob обновляет время намазов для всех пользователей
+func UpdatePrayerTimesJob() {
+	// Получаем пользователей с установленными намазами
+	users, err := db.GetUsersWithPrayerTimes()
+	if err != nil {
+		log.Println("Ошибка получения пользователей:", err)
+		return
+	}
+	for _, user := range users {
+		city, err := db.GetUserCity(user.ChatID)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		times, err := api.GetPrayerTimes(city, "Kazakhstan")
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		// Сохраняем в БД
+		err = db.SavePrayerTimes(user.ChatID, city, times.Fajr, times.Dhuhr, times.Asr, times.Maghrib, times.Isha)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+	}
 }
