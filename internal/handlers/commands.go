@@ -40,8 +40,12 @@ func HandleCommand(msg *tgbotapi.Message) {
 		sendHelpMessage(msg.Chat.ID)
 	case "/set_prayer_times":
 		setPrayerTimes(msg.Chat.ID)
+	case "/status":
+		showUserStatus(msg.Chat.ID)
+	case "/db_test":
+		testDatabaseConnection(msg.Chat.ID)
 	default:
-		sendMessage(msg.Chat.ID, "Неизвестная команда. Используйте /start.")
+		sendMessage(msg.Chat.ID, "Неизвестная команда. Используйте /help для списка команд.")
 	}
 }
 
@@ -69,7 +73,7 @@ func setPrayerTimes(chatID int64) {
 		return
 	}
 
-	sendMessage(chatID, "✅ Время намазов обновлено!")
+	sendMessage(chatID, "✅ Время намазов обновлено! 🔔 Напоминания активированы для всех намазов.")
 }
 
 // sendWelcomeMessage отправляет приветственное сообщение
@@ -85,14 +89,45 @@ func sendHelpMessage(chatID int64) {
 	text := "📌 *Список команд:*\n\n" +
 		"🔹 /start - Начать работу с ботом\n" +
 		"🔹 /help - Показать список команд\n" +
-		"🔹 /set_city - Установить город для определения времени намаза\n" +
-		//"🔹 /set_reminders - Включить напоминания о намазах\n" +
-		//"🔹 /disable_reminders - Отключить напоминания\n" +
+		"🔹 /set_city - Установить город (автоматически включает напоминания)\n" +
 		"🔹 /prayer_times - Показать текущее расписание намазов\n" +
 		"🔹 /mark - Отметить выполнение намаза\n" +
-		"🔹 /set_prayer_times - Установить время намазов\n"
+		"🔹 /set_prayer_times - Обновить время намазов\n" +
+		"🔹 /status - Показать статус настроек\n" +
+		"🔹 /db_test - Проверить подключение к базе данных\n\n" +
+		"🔔 *Напоминания:*\n" +
+		"Бот автоматически отправляет напоминания в точное время каждого намаза!\n" +
+		"Просто выберите свой город командой /set_city"
 
 	sendMessage(chatID, text)
+}
+
+// showUserStatus показывает текущий статус настроек пользователя
+func showUserStatus(chatID int64) {
+	city, err := db.GetUserCity(chatID)
+	if err != nil {
+		sendMessage(chatID, "❌ Город не установлен. Используйте /set_city для настройки.")
+		return
+	}
+
+	times, err := db.GetPrayerTimes(chatID)
+	if err != nil {
+		sendMessage(chatID, fmt.Sprintf("🌍 Город: %s\n❌ Время намазов не установлено. Используйте /set_prayer_times", city))
+		return
+	}
+
+	status := fmt.Sprintf("📊 *Ваш статус:*\n\n"+
+		"🌍 Город: %s\n"+
+		"🔔 Напоминания: ✅ Активны\n\n"+
+		"⏰ *Время намазов:*\n"+
+		"🌅 Фаджр: %s\n"+
+		"🏙️ Зухр: %s\n"+
+		"🌇 Аср: %s\n"+
+		"🌆 Магриб: %s\n"+
+		"🌃 Иша: %s",
+		city, times["Фаджр"], times["Зухр"], times["Аср"], times["Магриб"], times["Иша"])
+
+	sendMessage(chatID, status)
 }
 
 func setReminders(chatID int64) {
@@ -173,4 +208,66 @@ func sendCityButtons(chatID int64) {
 	msg := tgbotapi.NewMessage(chatID, "Выберите ваш город:")
 	msg.ReplyMarkup = buttons
 	botAPI.Send(msg)
+}
+
+// testDatabaseConnection тестирует подключение к базе данных и отправляет результат пользователю
+func testDatabaseConnection(chatID int64) {
+	// Тестируем основное подключение
+	if err := db.TestConnection(); err != nil {
+		sendMessage(chatID, fmt.Sprintf("❌ Ошибка подключения к базе данных:\n%v", err))
+		return
+	}
+
+	// Получаем информацию о базе данных
+	info, err := db.GetDatabaseInfo()
+	if err != nil {
+		sendMessage(chatID, fmt.Sprintf("⚠️ Подключение работает, но ошибка получения информации:\n%v", err))
+		return
+	}
+
+	// Проверяем таблицы
+	tables, err := db.CheckTablesExist()
+	if err != nil {
+		sendMessage(chatID, fmt.Sprintf("⚠️ Подключение работает, но ошибка проверки таблиц:\n%v", err))
+		return
+	}
+
+	// Формируем отчет
+	var response string
+	response += "✅ *Тест базы данных успешен!*\n\n"
+
+	// Информация о БД
+	if dbName, ok := info["database"]; ok {
+		response += fmt.Sprintf("🏷️ База данных: %v\n", dbName)
+	}
+	if user, ok := info["user"]; ok {
+		response += fmt.Sprintf("👤 Пользователь: %v\n", user)
+	}
+
+	// Статус подключений
+	if connections, ok := info["connections"].(map[string]interface{}); ok {
+		response += fmt.Sprintf("🔗 Подключения: %v активных\n\n", connections["total"])
+	}
+
+	// Статус таблиц
+	response += "📋 *Статус таблиц:*\n"
+	requiredTables := []string{"users", "prayer_times", "prayers", "reminders"}
+	allTablesExist := true
+
+	for _, table := range requiredTables {
+		if exists, ok := tables[table]; ok && exists {
+			response += fmt.Sprintf("✅ %s\n", table)
+		} else {
+			response += fmt.Sprintf("❌ %s\n", table)
+			allTablesExist = false
+		}
+	}
+
+	if !allTablesExist {
+		response += "\n⚠️ Некоторые таблицы отсутствуют!\nВыполните миграции для создания таблиц."
+	} else {
+		response += "\n🎉 Все таблицы на месте!"
+	}
+
+	sendMessage(chatID, response)
 }

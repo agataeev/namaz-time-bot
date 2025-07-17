@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"os"
@@ -22,6 +23,113 @@ func InitDB() {
 	if err != nil {
 		log.Fatal("Ошибка подключения к БД:", err)
 	}
+
+	// Тестируем подключение
+	if err := TestConnection(); err != nil {
+		log.Fatal("Ошибка тестирования подключения к БД:", err)
+	}
+
+	log.Println("✅ Подключение к базе данных успешно установлено")
+}
+
+// TestConnection тестирует подключение к базе данных
+func TestConnection() error {
+	if DB == nil {
+		return fmt.Errorf("подключение к БД не инициализировано")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Тестируем подключение простым запросом
+	var result int
+	err := DB.QueryRow(ctx, "SELECT 1").Scan(&result)
+	if err != nil {
+		return fmt.Errorf("ошибка выполнения тестового запроса: %w", err)
+	}
+
+	if result != 1 {
+		return fmt.Errorf("неожиданный результат тестового запроса: %d", result)
+	}
+
+	return nil
+}
+
+// GetDatabaseInfo возвращает информацию о базе данных
+func GetDatabaseInfo() (map[string]interface{}, error) {
+	if DB == nil {
+		return nil, fmt.Errorf("подключение к БД не инициализировано")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	info := make(map[string]interface{})
+
+	// Получаем версию PostgreSQL
+	var version string
+	err := DB.QueryRow(ctx, "SELECT version()").Scan(&version)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка получения версии БД: %w", err)
+	}
+	info["version"] = version
+
+	// Получаем текущую базу данных
+	var dbName string
+	err = DB.QueryRow(ctx, "SELECT current_database()").Scan(&dbName)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка получения имени БД: %w", err)
+	}
+	info["database"] = dbName
+
+	// Получаем текущего пользователя
+	var user string
+	err = DB.QueryRow(ctx, "SELECT current_user").Scan(&user)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка получения пользователя БД: %w", err)
+	}
+	info["user"] = user
+
+	// Получаем статистику подключений
+	stats := DB.Stat()
+	info["connections"] = map[string]interface{}{
+		"total":        stats.TotalConns(),
+		"idle":         stats.IdleConns(),
+		"acquired":     stats.AcquiredConns(),
+		"constructing": stats.ConstructingConns(),
+	}
+
+	return info, nil
+}
+
+// CheckTablesExist проверяет существование необходимых таблиц
+func CheckTablesExist() (map[string]bool, error) {
+	if DB == nil {
+		return nil, fmt.Errorf("подключение к БД не инициализировано")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	tables := []string{"users", "prayer_times", "prayers", "reminders", "schema_migrations"}
+	result := make(map[string]bool)
+
+	for _, table := range tables {
+		var exists bool
+		query := `SELECT EXISTS (
+			SELECT FROM information_schema.tables 
+			WHERE table_schema = 'public' 
+			AND table_name = $1
+		)`
+
+		err := DB.QueryRow(ctx, query, table).Scan(&exists)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка проверки таблицы %s: %w", table, err)
+		}
+		result[table] = exists
+	}
+
+	return result, nil
 }
 
 // SaveUser сохраняет пользователя и его город
